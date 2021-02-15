@@ -78,7 +78,7 @@ impl SignalQuery {
     }
 
     pub fn signal_id(&self) -> SignalId {
-        unsafe { SignalId::new(from_glib(self.0.itype), self.0.signal_id) }
+        unsafe { SignalId::new(self.0.signal_id) }
     }
 
     pub fn type_(&self) -> Type {
@@ -118,11 +118,11 @@ impl fmt::Debug for SignalQuery {
 }
 /// Signal ID.
 #[derive(Debug, Clone, Copy)]
-pub struct SignalId(Type, u32);
+pub struct SignalId(u32);
 
 impl SignalId {
-    unsafe fn new(type_: Type, id: u32) -> Self {
-        Self(type_, id)
+    unsafe fn new(id: u32) -> Self {
+        Self(id)
     }
 
     /// Find a SignalId by it's `name` and the `type` it connects to
@@ -133,16 +133,12 @@ impl SignalId {
             if signal_id == 0 {
                 None
             } else {
-                Some(Self::new(type_, signal_id))
+                Some(Self::new(signal_id))
             }
         }
     }
 
     pub fn id(&self) -> u32 {
-        self.1
-    }
-
-    pub fn type_(&self) -> Type {
         self.0
     }
 
@@ -160,7 +156,7 @@ impl SignalId {
     #[doc(alias = "g_signal_name")]
     pub fn name(&self) -> Option<crate::GString> {
         unsafe {
-            let signal_name = gobject_ffi::g_signal_name(self.1);
+            let signal_name = gobject_ffi::g_signal_name(self.id());
             from_glib_none(signal_name)
         }
     }
@@ -341,9 +337,10 @@ impl Signal {
     pub fn signal_id(&self) -> SignalId {
         match &*self.registration.lock().unwrap() {
             SignalRegistration::Unregistered { .. } => panic!("Signal not registered yet"),
-            SignalRegistration::Registered { type_, signal_id } => unsafe {
-                SignalId::new(*type_, *signal_id)
-            },
+            SignalRegistration::Registered {
+                type_: _,
+                signal_id,
+            } => unsafe { SignalId::new(*signal_id) },
         }
     }
 
